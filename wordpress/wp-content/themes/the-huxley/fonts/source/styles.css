@@ -1,0 +1,8 @@
+
+@font-face {
+  font-family: 'SourceSerifPro-Semibold';
+  src: url('SourceSerifPro-Semibold.eot?#iefix') format('embedded-opentype'),  url('SourceSerifPro-Semibold.otf')  format('opentype'),
+	     url('SourceSerifPro-Semibold.woff') format('woff'), url('SourceSerifPro-Semibold.ttf')  format('truetype'), url('SourceSerifPro-Semibold.svg#SourceSerifPro-Semibold') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
