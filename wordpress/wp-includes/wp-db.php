@@ -738,7 +738,8 @@ class wpdb {
 			$this->charset = DB_CHARSET;
 		}
 
-		if ( ( $this->use_mysqli && ! ( $this->dbh instanceof mysqli ) ) || empty( $this->dbh ) ) {
+		if ( ( $this->use_mysqli && ! ( $this->dbh instanceof mysqli ) )
+		  || ( empty( $this->dbh ) || ! ( $this->dbh instanceof mysqli ) ) ) {
 			return;
 		}
 
@@ -2594,13 +2595,8 @@ class wpdb {
 
 			if ( is_array( $value['length'] ) ) {
 				$length = $value['length']['length'];
-				$truncate_by_byte_length = 'byte' === $value['length']['type'];
 			} else {
 				$length = false;
-				// Since we have no length, we'll never truncate.
-				// Initialize the variable to false. true would take us
-				// through an unnecessary (for this case) codepath below.
-				$truncate_by_byte_length = false;
 			}
 
 			// There's no charset to work with.
@@ -2612,6 +2608,8 @@ class wpdb {
 			if ( ! is_string( $value['value'] ) ) {
 				continue;
 			}
+
+			$truncate_by_byte_length = 'byte' === $value['length']['type'];
 
 			$needs_validation = true;
 			if (
@@ -2678,42 +2676,55 @@ class wpdb {
 			$queries = array();
 			foreach ( $data as $col => $value ) {
 				if ( ! empty( $value['db'] ) ) {
-					// We're going to need to truncate by characters or bytes, depending on the length value we have.
-					if ( 'byte' === $value['length']['type'] ) {
-						// Using binary causes LEFT() to truncate by bytes.
-						$charset = 'binary';
-					} else {
-						$charset = $value['charset'];
+					if ( ! isset( $queries[ $value['charset'] ] ) ) {
+						$queries[ $value['charset'] ] = array();
 					}
 
-					if ( is_array( $value['length'] ) ) {
-						$queries[ $col ] = $this->prepare( "CONVERT( LEFT( CONVERT( %s USING $charset ), %.0f ) USING {$this->charset} )", $value['value'], $value['length']['length'] );
-					} else if ( 'binary' !== $charset ) {
-						// If we don't have a length, there's no need to convert binary - it will always return the same result.
-						$queries[ $col ] = $this->prepare( "CONVERT( CONVERT( %s USING $charset ) USING {$this->charset} )", $value['value'] );
+					// We're going to need to truncate by characters or bytes, depending on the length value we have.
+					if ( 'byte' === $value['length']['type'] ) {
+						// Split the CONVERT() calls by charset, so we can make sure the connection is right
+						$queries[ $value['charset'] ][ $col ] = $this->prepare( "CONVERT( LEFT( CONVERT( %s USING binary ), %d ) USING {$value['charset']} )", $value['value'], $value['length']['length'] );
+					} else {
+						$queries[ $value['charset'] ][ $col ] = $this->prepare( "LEFT( CONVERT( %s USING {$value['charset']} ), %d )", $value['value'], $value['length']['length'] );
 					}
 
 					unset( $data[ $col ]['db'] );
 				}
 			}
 
-			$sql = array();
-			foreach ( $queries as $column => $query ) {
+			$connection_charset = $this->charset;
+			foreach ( $queries as $charset => $query ) {
 				if ( ! $query ) {
 					continue;
 				}
 
-				$sql[] = $query . " AS x_$column";
+				// Change the charset to match the string(s) we're converting
+				if ( $charset !== $connection_charset ) {
+					$connection_charset = $charset;
+					$this->set_charset( $this->dbh, $charset );
+				}
+
+				$this->check_current_query = false;
+
+				$sql = array();
+				foreach ( $query as $column => $column_query ) {
+					$sql[] = $column_query . " AS x_$column";
+				}
+
+				$row = $this->get_row( "SELECT " . implode( ', ', $sql ), ARRAY_A );
+				if ( ! $row ) {
+					$this->set_charset( $this->dbh, $connection_charset );
+					return new WP_Error( 'wpdb_strip_invalid_text_failure' );
+				}
+
+				foreach ( array_keys( $query ) as $column ) {
+					$data[ $column ]['value'] = $row["x_$column"];
+				}
 			}
 
-			$this->check_current_query = false;
-			$row = $this->get_row( "SELECT " . implode( ', ', $sql ), ARRAY_A );
-			if ( ! $row ) {
-				return new WP_Error( 'wpdb_strip_invalid_text_failure' );
-			}
-
-			foreach ( array_keys( $data ) as $column ) {
-				$data[ $column ]['value'] = $row["x_$column"];
+			// Don't forget to change the charset back!
+			if ( $connection_charset !== $this->charset ) {
+				$this->set_charset( $this->dbh );
 			}
 		}
 
@@ -2823,8 +2834,11 @@ class wpdb {
 		// Allow (select...) union [...] style queries. Use the first query's table name.
 		$query = ltrim( $query, "\r\n\t (" );
 
-		// Strip everything between parentheses except nested selects.
-		$query = preg_replace( '/\((?!\s*select)[^(]*?\)/is', '()', $query );
+		/*
+		 * Strip everything between parentheses except nested selects and use only 1,000
+		 * chars of the query.
+		 */
+		$query = preg_replace( '/\((?!\s*select)[^(]*?\)/is', '()', substr( $query, 0, 1000 ) );
 
 		// Quickly match most common queries.
 		if ( preg_match( '/^\s*(?:'
