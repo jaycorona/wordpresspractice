@@ -79,3 +79,17 @@ register_nav_menus( array(
 
 
 ?>
+
+<?php function my_login_logo() { ?>
+    <style type="text/css">
+        .login h1 a {
+            background-image: url(<?php echo get_stylesheet_directory_uri(); ?>/images/jomarjay.png);
+            padding-bottom: 134px;
+            height: 65px;
+            width: 100% !important;
+            background-size: 79%;
+        }
+    </style>
+<?php }
+add_action( 'login_enqueue_scripts', 'my_login_logo' );
+?>

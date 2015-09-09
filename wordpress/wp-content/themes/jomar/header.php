@@ -26,7 +26,7 @@
     <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
 
     <link rel="stylesheet" href="<?php echo get_template_directory_uri() ?>/css/bootstrap.min.css">
-    <link rel="stylesheet" href="<?php echo get_template_directory_uri() ?>/css/main.css" id="color-switcher-link">
+    <link rel="stylesheet" href="<?php echo get_template_directory_uri() ?>/css/main2.css">
     <link rel="stylesheet" href="<?php echo get_template_directory_uri() ?>/css/animations.css">
     <link rel="stylesheet" href="<?php echo get_template_directory_uri() ?>/css/fonts.css">
     <link rel="stylesheet" href="<?php bloginfo('stylesheet_url') ?>"> <!-- style.css -->
@@ -55,9 +55,9 @@
             <div class="col-sm-12"> 
                 <?php
 					if ( is_front_page() && is_home() ) : ?>
-						<a class="navbar-brand text-center" href="<?php echo esc_url( home_url( '/' ) ); ?>" >WYS<span><?php bloginfo( 'name' ); ?></span></a>
+						<a class="navbar-brand text-center" href="<?php echo esc_url( home_url( '/' ) ); ?>" >Ar-r<span><?php bloginfo( 'name' ); ?></span></a>
 					<?php else : ?>
-						<a class="navbar-brand text-center" href="<?php echo esc_url( home_url( '/' ) ); ?>" >WYS<span><?php bloginfo( 'name' ); ?></span></a>
+						<a class="navbar-brand text-center" href="<?php echo esc_url( home_url( '/' ) ); ?>" >Ar-r<span><?php bloginfo( 'name' ); ?></span></a>
 					<?php endif;
 
 				?>

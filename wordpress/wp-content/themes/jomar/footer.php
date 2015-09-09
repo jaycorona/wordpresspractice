@@ -83,17 +83,15 @@
                     <div class="widget widget_archive">
                         <h3 class="widget-title">recent post</h3>
                         <ul>
-	                        <?php if (have_posts()) : while (have_posts()) : the_post(); ?>
+	                        <?php 
+                            // Post need to limit the new post not done
+                            if (have_posts()) : while (have_posts()) : the_post(); ?>
 							<li><a href="<?php the_title(); ?>" title=""><?php the_title(); ?></a></li>
 							<!-- <h4>Posted on <?php the_time('F jS, Y') ?></h4>
 							<p><?php the_content(__('(more...)')); ?></p> -->
 							 <?php endwhile; else: ?>
 							<p><?php _e('Sorry, no posts matched your criteria.'); ?></p><?php endif; ?>	
 
-                           
-                            <li>
-                                <a href="index.html#">Lorem ipsum dolor sit</a>
-                            </li>                                                    
                         </ul>
                     </div>
                 </div>
